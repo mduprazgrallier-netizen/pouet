@@ -2,24 +2,29 @@ const pdfMake = require('pdfmake/build/pdfmake');
 const pdfFonts = require('pdfmake/build/vfs_fonts');
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
-module.exports = async (req, res) => {
+module.exports = (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
   
   try {
     const body = req.body;
     
-    // Reconstruire le docDefinition avec la fonction footer
     const docDefinition = {
       pageSize: body.pageSize || 'A4',
       pageMargins: body.pageMargins || [40, 40, 40, 60],
-      content: body.content,
+      content: body.content || [],
       
-      // Footer avec numéro de page - reconstruit côté serveur
       footer: function(currentPage, pageCount) {
         const color = body.footerColor || '#e85a50';
         return {
@@ -36,10 +41,10 @@ module.exports = async (req, res) => {
     
     const pdfDoc = pdfMake.createPdf(docDefinition);
     
-    pdfDoc.getBuffer((buffer) => {
+    pdfDoc.getBuffer(function(buffer) {
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename="magazine.pdf"');
-      res.send(Buffer.from(buffer));
+      res.end(buffer);
     });
     
   } catch (error) {
